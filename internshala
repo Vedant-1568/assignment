@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopEase - Simple E-commerce</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <header class="bg-white shadow-md p-4">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-blue-600">🛍️ ShopEase</h1>
+            <div class="flex gap-4">
+                <button id="cart-btn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    Cart (<span id="cart-count">0</span>)
+                </button>
+                <button id="auth-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Login
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-4">
+        
+        <div id="login-page" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-bold mb-4">Login to ShopEase</h2>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label class="block mb-2">Email:</label>
+                    <input type="email" id="email" required class="w-full p-2 border rounded">
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2">Password:</label>
+                    <input type="password" id="password" required class="w-full p-2 border rounded">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+                    Login
+                </button>
+            </form>
+        </div>
+
+        <div id="products-page" class="hidden">
+            <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+                <h3 class="font-bold mb-4">Filters</h3>
+                <div class="flex gap-4">
+                    <select id="category-filter" class="p-2 border rounded">
+                        <option value="">All Categories</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="books">Books</option>
+                    </select>
+                    <input type="text" id="search-filter" placeholder="Search products..." class="p-2 border rounded flex-1">
+                </div>
+            </div>
+
+            <div id="products-grid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            </div>
+        </div>
+
+        <div id="cart-page" class="hidden bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-bold mb-4">Shopping Cart</h2>
+            <div id="cart-items">
+            </div>
+            <div id="cart-empty" class="text-center py-8 hidden">
+                <p class="text-gray-500 mb-4">Your cart is empty</p>
+                <button onclick="showProducts()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Start Shopping
+                </button>
+            </div>
+            <div id="cart-total" class="border-t pt-4 mt-4 hidden">
+                <div class="flex justify-between items-center">
+                    <span class="text-xl font-bold">Total: $<span id="total-amount">0.00</span></span>
+                    <button class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                        Checkout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const products = [
+            { id: 1, name: "Laptop", price: 999, category: "electronics", emoji: "💻" },
+            { id: 2, name: "T-Shirt", price: 25, category: "clothing", emoji: "👕" },
+            { id: 3, name: "Book", price: 15, category: "books", emoji: "📚" },
+            { id: 4, name: "Phone", price: 699, category: "electronics", emoji: "📱" },
+            { id: 5, name: "Jeans", price: 60, category: "clothing", emoji: "👖" },
+            { id: 6, name: "Novel", price: 12, category: "books", emoji: "📖" }
+        ];
+
+        let user = null;
+        let cart = [];
+        let currentPage = 'login';
+
+        function init() {
+            loadData();
+            setupEvents();
+            showPage();
+        }
+
+        function loadData() {
+            const savedUser = localStorage.getItem('user');
+            const savedCart = localStorage.getItem('cart');
+            
+            if (savedUser) {
+                user = JSON.parse(savedUser);
+                currentPage = 'products';
+            }
+            
+            if (savedCart) {
+                cart = JSON.parse(savedCart);
+            }
+        }
+
+        function saveData() {
+            if (user) {
+                localStorage.setItem('user', JSON.stringify(user));
+            }
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
+        function setupEvents() {
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('auth-btn').addEventListener('click', handleAuth);
+            document.getElementById('cart-btn').addEventListener('click', showCart);
+            document.getElementById('category-filter').addEventListener('change', filterProducts);
+            document.getElementById('search-filter').addEventListener('input', filterProducts);
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            user = { email: email, name: email.split('@')[0] };
+            saveData();
+            currentPage = 'products';
+            showPage();
+        }
+
+        function handleAuth() {
+            if (user) {
+                user = null;
+                cart = [];
+                localStorage.clear();
+                currentPage = 'login';
+            } else {
+                currentPage = 'login';
+            }
+            showPage();
+        }
+
+        function showPage() {
+            document.getElementById('login-page').classList.add('hidden');
+            document.getElementById('products-page').classList.add('hidden');
+            document.getElementById('cart-page').classList.add('hidden');
+
+            if (currentPage === 'login') {
+                document.getElementById('login-page').classList.remove('hidden');
+            } else if (currentPage === 'products') {
+                document.getElementById('products-page').classList.remove('hidden');
+                showProducts();
+            } else if (currentPage === 'cart') {
+                document.getElementById('cart-page').classList.remove('hidden');
+                showCartItems();
+            }
+
+            updateHeader();
+        }
+
+        function updateHeader() {
+            const authBtn = document.getElementById('auth-btn');
+            const cartCount = document.getElementById('cart-count');
+            
+            if (user) {
+                authBtn.textContent = `Logout (${user.name})`;
+            } else {
+                authBtn.textContent = 'Login';
+            }
+            
+            cartCount.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+        }
+
+        function showProducts() {
+            currentPage = 'products';
+            filterProducts();
+            showPage();
+        }
+
+        function filterProducts() {
+            const category = document.getElementById('category-filter').value;
+            const search = document.getElementById('search-filter').value.toLowerCase();
+            
+            let filtered = products.filter(product => {
+                const matchCategory = !category || product.category === category;
+                const matchSearch = !search || product.name.toLowerCase().includes(search);
+                return matchCategory && matchSearch;
+            });
+
+            displayProducts(filtered);
+        }
+
+        function displayProducts(productsToShow) {
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = '';
+
+            productsToShow.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.className = 'bg-white p-4 rounded-lg shadow-md';
+                productCard.innerHTML = `
+                    <div class="text-4xl text-center mb-2">${product.emoji}</div>
+                    <h3 class="font-bold text-center mb-2">${product.name}</h3>
+                    <p class="text-center text-blue-600 font-bold mb-4">$${product.price}</p>
+                    <button onclick="addToCart(${product.id})" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+                        Add to Cart
+                    </button>
+                `;
+                grid.appendChild(productCard);
+            });
+        }
+
+        function addToCart(productId) {
+            if (!user) {
+                alert('Please login first');
+                return;
+            }
+
+            const product = products.find(p => p.id === productId);
+            const existingItem = cart.find(item => item.id === productId);
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    emoji: product.emoji,
+                    quantity: 1
+                });
+            }
+
+            saveData();
+            updateHeader();
+        }
+
+
+        function showCart() {
+            if (!user) {
+                alert('Please login first');
+                return;
+            }
+            currentPage = 'cart';
+            showPage();
+        }
+
+        function showCartItems() {
+            const cartItems = document.getElementById('cart-items');
+            const cartEmpty = document.getElementById('cart-empty');
+            const cartTotal = document.getElementById('cart-total');
+
+            if (cart.length === 0) {
+                cartItems.innerHTML = '';
+                cartEmpty.classList.remove('hidden');
+                cartTotal.classList.add('hidden');
+                return;
+            }
+
+            cartEmpty.classList.add('hidden');
+            cartTotal.classList.remove('hidden');
+
+            cartItems.innerHTML = cart.map(item => `
+                <div class="flex items-center justify-between border-b py-4">
+                    <div class="flex items-center gap-4">
+                        <span class="text-2xl">${item.emoji}</span>
+                        <div>
+                            <h4 class="font-bold">${item.name}</h4>
+                            <p class="text-gray-600">$${item.price} each</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button onclick="changeQuantity(${item.id}, -1)" class="bg-gray-200 px-2 py-1 rounded">-</button>
+                        <span class="font-bold">${item.quantity}</span>
+                        <button onclick="changeQuantity(${item.id}, 1)" class="bg-gray-200 px-2 py-1 rounded">+</button>
+                        <span class="font-bold text-blue-600">$${(item.price * item.quantity).toFixed(2)}</span>
+                        <button onclick="removeFromCart(${item.id})" class="text-red-600 hover:text-red-800">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+
+            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            document.getElementById('total-amount').textContent = total.toFixed(2);
+        }
+
+        function changeQuantity(productId, change) {
+            const item = cart.find(item => item.id === productId);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    removeFromCart(productId);
+                } else {
+                    saveData();
+                    showCartItems();
+                    updateHeader();
+                }
+            }
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.id !== productId);
+            saveData();
+            showCartItems();
+            updateHeader();
+        }
+
+        init();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97b496bbd6a5cd03',t:'MTc1NzIzMTE1MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
